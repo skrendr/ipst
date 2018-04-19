@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2018, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package eu.itesla_project.case_projector;
 
 import java.nio.file.Path;
@@ -9,7 +15,9 @@ import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.extensions.AbstractExtension;
 import com.powsybl.loadflow.LoadFlowParameters;
 
-
+/**
+* @author Giovanni Ferrari <giovanni.ferrari at techrain.eu>
+*/
 public class CaseProjectorLoadFlowParameters extends AbstractExtension<LoadFlowParameters> {
 
     private Path amplHomeDir;
