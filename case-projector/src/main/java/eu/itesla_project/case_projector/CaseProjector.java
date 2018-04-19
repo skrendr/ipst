@@ -6,7 +6,6 @@
  */
 package eu.itesla_project.case_projector;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;

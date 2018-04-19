@@ -75,7 +75,7 @@ public class CaseProjectorTool implements Tool {
     @Override
     public void run(CommandLine line, ToolRunningContext context) throws Exception {
         Path caseFile = Paths.get(line.getOptionValue("case-file"));
-        
+
         Network network = Importers.loadNetwork(caseFile);
         if (network == null) {
             throw new RuntimeException("Case " + caseFile + " not found");
