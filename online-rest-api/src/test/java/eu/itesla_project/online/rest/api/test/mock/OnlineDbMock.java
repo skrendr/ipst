@@ -15,9 +15,15 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import eu.itesla_project.cases.CaseType;
+
+import com.powsybl.iidm.network.Branch;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.NetworkFactory;
+import com.powsybl.iidm.network.Substation;
+import com.powsybl.iidm.network.TopologyKind;
+import com.powsybl.iidm.network.VoltageLevel;
+
 import eu.itesla_project.modules.contingencies.ActionParameters;
 import eu.itesla_project.modules.online.OnlineDb;
 import eu.itesla_project.modules.online.OnlineProcess;
@@ -41,8 +47,12 @@ public class OnlineDbMock implements OnlineDb {
 
     public OnlineDbMock() {
         network = NetworkFactory.create("test", "test");
-        network.newSubstation().setId("sub1").setName("substation1").setCountry(Country.FR).add();
-
+        Substation substation1 = network.newSubstation().setId("sub1").setName("substation1").setCountry(Country.FR).add();
+        VoltageLevel voltageLevel1 = substation1.newVoltageLevel()
+                .setId("voltageLevel1")
+                .setNominalV(400)
+                .setTopologyKind(TopologyKind.NODE_BREAKER)
+                .add();
         processMap = new HashMap<String, OnlineProcess>();
         DateTime dt = new DateTime(2016, 1, 15, 01, 0, 0, 0);
         OnlineProcess p = new OnlineProcess("1111", "name1", "owner1", CaseType.FO.toString(), dt,
@@ -279,7 +289,7 @@ public class OnlineDbMock implements OnlineDb {
 
     @Override
     public Network getState(String workflowId, Integer stateId) {
-        return null;
+        return network;
     }
 
     @Override
@@ -324,7 +334,7 @@ public class OnlineDbMock implements OnlineDb {
             return null;
         Map<Integer, List<LimitViolation>> res = new HashMap<Integer, List<LimitViolation>>();
         List<LimitViolation> viols = new ArrayList<>();
-        LimitViolation lv = new LimitViolation("sub1", LimitViolationType.CURRENT, 100, "HIGH_CURRENT", 0, 110, Country.FR, 240);
+        LimitViolation lv = new LimitViolation("voltageLevel1", LimitViolationType.CURRENT, "HIGH_CURRENT", Integer.MAX_VALUE, 100, 0, 110, Branch.Side.ONE);
         viols.add(lv);
         res.put(0, viols);
         return res;
@@ -373,7 +383,7 @@ public class OnlineDbMock implements OnlineDb {
         Map<Integer, Map<String, List<LimitViolation>>> res = new HashMap<>();
         Map<String, List<LimitViolation>> mmap = new HashMap<>();
         List<LimitViolation> viols = new ArrayList<>();
-        LimitViolation lv = new LimitViolation("sub1", LimitViolationType.CURRENT, 100, "HIGH_CURRENT", 0, 200, Country.FR, 120);
+        LimitViolation lv = new LimitViolation("voltageLevel1", LimitViolationType.CURRENT, "HIGH_CURRENT", Integer.MAX_VALUE, 100, 0, 200, Branch.Side.ONE);
         viols.add(lv);
         mmap.put("test_contingency", viols);
         res.put(0, mmap);

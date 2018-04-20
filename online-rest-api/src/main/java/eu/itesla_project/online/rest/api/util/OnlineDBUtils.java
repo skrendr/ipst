@@ -42,7 +42,10 @@ import eu.itesla_project.online.rest.model.Violation;
 import eu.itesla_project.online.rest.model.ViolationSynthesis;
 import eu.itesla_project.online.rest.model.WorkflowInfo;
 import eu.itesla_project.online.rest.model.WorkflowResult;
+
+import com.powsybl.iidm.network.Network;
 import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolationHelper;
 import com.powsybl.security.LimitViolationType;
 
 /**
@@ -137,15 +140,15 @@ public class OnlineDBUtils implements ProcessDBUtils {
                 Map<Integer, List<LimitViolation>> violations = onlinedb.getViolations(workflowId,
                         OnlineStep.LOAD_FLOW);
                 if (violations != null) {
-
                     violations.forEach((state, viols) -> {
+                        Network network = onlinedb.getState(workflowId, state);
                         StateProcessingStatus sp = onlinedb.getStatesProcessingStatus(workflowId).get(state);
                         String status = sp.getStatus().get("LOAD_FLOW");
                         PreContingencyResult pcr = new PreContingencyResult(state, viols.isEmpty(),
                                 status != null && "SUCCESS".equals(status));
                         viols.forEach(lv -> {
-                            pcr.addViolation(new Violation(lv.getCountry().toString(), lv.getSubjectId(),
-                                    lv.getLimitType().name(), lv.getLimit(), lv.getValue(), (int) lv.getBaseVoltage()));
+                            pcr.addViolation(new Violation(LimitViolationHelper.getCountry(lv, network).toString(), lv.getSubjectId(),
+                                    lv.getLimitType().name(), lv.getLimit(), lv.getValue(), (int) LimitViolationHelper.getNominalVoltage(lv, network)));
                         });
                         res.addPreContingency(pcr);
                     });
@@ -177,6 +180,7 @@ public class OnlineDBUtils implements ProcessDBUtils {
                 if (violsMap != null) {
 
                     violsMap.forEach((state, contViolMap) -> {
+                        Network network = onlinedb.getState(workflowId, state);
                         contViolMap.forEach((cont, contViols) -> {
                             Map<Integer, SimulationResult> srMap = postMap.get(cont);
                             if (srMap == null) {
@@ -190,9 +194,9 @@ public class OnlineDBUtils implements ProcessDBUtils {
                             }
 
                             contViols.forEach(lv -> {
-                                sr.addViolation(new Violation(lv.getCountry().toString(), lv.getSubjectId(),
+                                sr.addViolation(new Violation(LimitViolationHelper.getCountry(lv, network).toString(), lv.getSubjectId(),
                                         lv.getLimitType().name(), lv.getLimit(), lv.getValue(),
-                                        (int) lv.getBaseVoltage()));
+                                        (int) LimitViolationHelper.getNominalVoltage(lv, network)));
                             });
                         });
 
@@ -242,12 +246,13 @@ public class OnlineDBUtils implements ProcessDBUtils {
 
                     if (previolsMap != null) {
                         previolsMap.forEach((state, limitList) -> {
+                            Network network = onlinedb.getState(workflowId, state);
                             StateSynthesis statesynt = statesMap.get(state);
                             if (statesynt == null) {
                                 statesynt = new StateSynthesis(state);
                                 statesMap.put(state, statesynt);
                             }
-                            fillViolationSynthesis(dateTime, statesynt.getPreContingencyViolations(), limitList);
+                            fillViolationSynthesis(dateTime, statesynt.getPreContingencyViolations(), limitList, network);
                         });
                     }
 
@@ -263,14 +268,14 @@ public class OnlineDBUtils implements ProcessDBUtils {
                             }
 
                             Map<String, List<ViolationSynthesis>> contingencyMap = statesynt.getPostContingencyViolations();
-
+                            Network network = onlinedb.getState(workflowId, state);
                             contingencyViolationMap.forEach((cont, limitList) -> {
                                 List<ViolationSynthesis> violationList = contingencyMap.get(cont);
                                 if (violationList == null) {
                                     violationList = new ArrayList();
                                     contingencyMap.put(cont, violationList);
                                 }
-                                fillViolationSynthesis(dateTime, violationList, limitList);
+                                fillViolationSynthesis(dateTime, violationList, limitList, network);
                             });
                         });
                     }
@@ -285,7 +290,7 @@ public class OnlineDBUtils implements ProcessDBUtils {
         return null;
     }
 
-    private void fillViolationSynthesis(DateTime dateTime, List<ViolationSynthesis> violationList, List<LimitViolation> limitList)  {
+    private void fillViolationSynthesis(DateTime dateTime, List<ViolationSynthesis> violationList, List<LimitViolation> limitList, Network network)  {
         limitList.forEach(lv -> {
             LimitViolationType violationType = lv.getLimitType();
             String equipment = lv.getSubjectId();
@@ -298,7 +303,7 @@ public class OnlineDBUtils implements ProcessDBUtils {
             if (searchSynt.isPresent()) {
                 synt = searchSynt.get();
             } else {
-                synt = new ViolationSynthesis(equipment, lv.getBaseVoltage(), violationType, limit, lv.getLimitName());
+                synt = new ViolationSynthesis(equipment, LimitViolationHelper.getNominalVoltage(lv, network), violationType, limit, lv.getLimitName());
                 violationList.add(synt);
             }
 

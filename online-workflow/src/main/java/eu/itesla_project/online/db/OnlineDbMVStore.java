@@ -1316,11 +1316,12 @@ public class OnlineDbMVStore implements OnlineDb {
     private void storeViolations(String workflowId, String mapName, List<LimitViolation> violations) {
         try {
             MVStore wfMVStore = getStore(workflowId);
+            Network network = getState(workflowId, 0);
             Map<String, String> metricsMap = wfMVStore.openMap(mapName, mapBuilder);
             int violationIndex = 0;
             for (LimitViolation limitViolation : violations) {
                 String violationId = limitViolation.getSubjectId() + "_" + violationIndex;
-                metricsMap.put(violationId, OnlineDbMVStoreUtils.limitViolationToJson(limitViolation));
+                metricsMap.put(violationId, OnlineDbMVStoreUtils.limitViolationToJson(limitViolation, network));
                 violationIndex++;
             }
             wfMVStore.commit();
