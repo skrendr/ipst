@@ -21,6 +21,8 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
+
+import com.powsybl.iidm.network.Branch;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import eu.itesla_project.modules.contingencies.ActionParameterBooleanValue;
@@ -30,6 +32,7 @@ import eu.itesla_project.modules.contingencies.ActionParameterStringValue;
 import eu.itesla_project.modules.contingencies.ActionParameters;
 import eu.itesla_project.modules.online.OnlineProcess;
 import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolationHelper;
 import com.powsybl.security.LimitViolationType;
 import com.powsybl.simulation.securityindexes.SecurityIndexType;
 
@@ -104,17 +107,20 @@ public final class OnlineDbMVStoreUtils {
                 Float.parseFloat(limitViolation.get("Value")));
     }
 
-    public static String limitViolationToJson(LimitViolation violation) {
+    public static String limitViolationToJson(LimitViolation violation, Network network) {
         Map<String, String> limitViolation = new HashMap<String, String>();
         limitViolation.put("Subject", violation.getSubjectId());
         limitViolation.put("LimitType", violation.getLimitType().name());
         limitViolation.put("Limit", Float.toString(violation.getLimit()));
         limitViolation.put("LimitReduction", Float.toString(violation.getLimitReduction()));
         limitViolation.put("Value", Float.toString(violation.getValue()));
-        limitViolation.put("Country", violation.getCountry().name());
-        limitViolation.put("BaseVoltage", Float.toString(violation.getBaseVoltage()));
+        limitViolation.put("Country", LimitViolationHelper.getCountry(violation, network).name());
+        limitViolation.put("BaseVoltage", Float.toString(LimitViolationHelper.getNominalVoltage(violation, network)));
         if (violation.getLimitName() != null) {
             limitViolation.put("LimitName", violation.getLimitName());
+        }
+        if (violation.getSide() != null) {
+            limitViolation.put("Side", violation.getSide().name());
         }
         return JSONSerializer.toJSON(limitViolation).toString();
     }
@@ -136,12 +142,12 @@ public final class OnlineDbMVStoreUtils {
         }
         return new LimitViolation(limitViolation.get("Subject"),
                 LimitViolationType.valueOf(limitViolation.get("LimitType")),
-                Float.parseFloat(limitViolation.get("Limit")),
                 limitViolation.get("LimitName"),
+                Integer.MAX_VALUE,
+                Float.parseFloat(limitViolation.get("Limit")),
                 limitReduction,
                 Float.parseFloat(limitViolation.get("Value")),
-                country,
-                baseVoltage);
+                limitViolation.containsKey("Side") ? Branch.Side.valueOf(limitViolation.get("Side")) : null);
     }
 
     public static String actionParametersToJson(ActionParameters actionParameters) {

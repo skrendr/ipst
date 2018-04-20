@@ -15,6 +15,7 @@ import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolationHelper;
 import com.powsybl.security.LimitViolationType;
 
 /**
@@ -61,7 +62,7 @@ public class ConstraintsModifierConfig {
     }
 
     public boolean isInAreaOfInterest(LimitViolation violation, Network network) {
-        return countries.isEmpty() || countries.contains(violation.getCountry());
+        return countries.isEmpty() || countries.contains(LimitViolationHelper.getCountry(violation, network));
     }
 
     @Override

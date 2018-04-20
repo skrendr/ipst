@@ -9,6 +9,7 @@ package eu.itesla_project.modules.constraints;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.powsybl.iidm.network.Branch;
 import com.powsybl.iidm.network.Bus;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Line;
@@ -100,9 +101,9 @@ public class ConstraintsModifierTestUtils {
 
     public static List<LimitViolation> getViolations() {
         List<LimitViolation> violations = new ArrayList<LimitViolation>();
-        violations.add(new LimitViolation(LINE_ID, LimitViolationType.CURRENT, CURRENT_LIMIT, null, 1, CURRENT_VALUE, COUNTRY, Float.NaN));
-        violations.add(new LimitViolation(VOLTAGE_LEVEL_1_ID, LimitViolationType.HIGH_VOLTAGE, HIGH_VOLTAGE_LIMIT, null, 1, V, COUNTRY, Float.NaN));
-        violations.add(new LimitViolation(VOLTAGE_LEVEL_2_ID, LimitViolationType.LOW_VOLTAGE, LOW_VOLTAGE_LIMIT, null, 1, V, COUNTRY, Float.NaN));
+        violations.add(new LimitViolation(LINE_ID, LimitViolationType.CURRENT, null, Integer.MAX_VALUE, CURRENT_LIMIT, 1f, CURRENT_VALUE, Branch.Side.ONE));
+        violations.add(new LimitViolation(VOLTAGE_LEVEL_1_ID, LimitViolationType.HIGH_VOLTAGE, HIGH_VOLTAGE_LIMIT, 1, V));
+        violations.add(new LimitViolation(VOLTAGE_LEVEL_2_ID, LimitViolationType.LOW_VOLTAGE, LOW_VOLTAGE_LIMIT, 1, V));
         return violations;
     }
 

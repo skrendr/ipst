@@ -21,6 +21,7 @@ import com.powsybl.security.LimitViolationsResult;
 import com.powsybl.security.PostContingencyResult;
 import com.powsybl.security.SecurityAnalysis;
 import com.powsybl.security.SecurityAnalysisImpl;
+import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.security.SecurityAnalysisResult;
 import com.powsybl.simulation.securityindexes.SecurityIndexType;
 import org.apache.commons.cli.CommandLine;
@@ -237,7 +238,7 @@ public class OverloadValidationTool implements Tool {
                     context.getOutputStream().println("running security analysis...");
 
                     SecurityAnalysis securityAnalysis = new SecurityAnalysisImpl(network, context.getComputationManager(), loadFlowFactory);
-                    SecurityAnalysisResult securityAnalysisResult = securityAnalysis.runAsync(network1 -> contingencies).join();
+                    SecurityAnalysisResult securityAnalysisResult = securityAnalysis.runAsync(network1 -> contingencies, network.getStateManager().getWorkingStateId(), SecurityAnalysisParameters.load()).join();
 
                     context.getOutputStream().println("checking rules...");
 

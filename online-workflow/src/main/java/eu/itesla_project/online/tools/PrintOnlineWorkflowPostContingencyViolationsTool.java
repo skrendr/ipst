@@ -11,6 +11,7 @@ import com.google.auto.service.AutoService;
 import com.powsybl.commons.io.table.Column;
 import com.powsybl.commons.io.table.TableFormatter;
 import com.powsybl.commons.io.table.TableFormatterConfig;
+import com.powsybl.iidm.network.Network;
 import com.powsybl.tools.Command;
 import com.powsybl.tools.Tool;
 import com.powsybl.tools.ToolRunningContext;
@@ -18,6 +19,7 @@ import eu.itesla_project.modules.online.OnlineConfig;
 import eu.itesla_project.modules.online.OnlineDb;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.LimitViolationFilter;
+import com.powsybl.security.LimitViolationHelper;
 import com.powsybl.security.LimitViolationType;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -126,13 +128,14 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
         Path outputFile = (line.hasOption("output-file")) ? Paths.get(line.getOptionValue("output-file")) : null;
         String outputFormat = (line.hasOption("output-format")) ? line.getOptionValue("output-format") : "ascii";
         try (OnlineDb onlinedb = config.getOnlineDbFactoryClass().newInstance().create()) {
+            Network network = onlinedb.getState(workflowId, 0);
             if (line.hasOption("state") && line.hasOption("contingency")) {
                 Integer stateId = Integer.parseInt(line.getOptionValue("state"));
                 String contingencyId = line.getOptionValue("contingency");
                 List<LimitViolation> violations = onlinedb.getPostContingencyViolations(workflowId, stateId, contingencyId);
                 if (violations != null && !violations.isEmpty()) {
                     try (TableFormatter formatter = PrintOnlineWorkflowUtils.createFormatter(tableFormatterConfig, outputFormat, outputFile, TABLE_TITLE, tableColumns)) {
-                        printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter);
+                        printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter, network);
                     }
                 } else {
                     context.getErrorStream().println("\nNo post contingency violations for workflow " + workflowId + ", contingency " + contingencyId + " and state " + stateId);
@@ -143,7 +146,7 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
                 if (stateViolationsByStateId != null && !stateViolationsByStateId.keySet().isEmpty()) {
                     try (TableFormatter formatter = PrintOnlineWorkflowUtils.createFormatter(tableFormatterConfig, outputFormat, outputFile, TABLE_TITLE, tableColumns)) {
                         new TreeMap<>(stateViolationsByStateId).forEach((contingencyId, violations) ->
-                                printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter));
+                                printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter, network));
                     }
                 } else {
                     context.getErrorStream().println("\nNo post contingency violations for workflow " + workflowId + " and state " + stateId);
@@ -155,7 +158,7 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
                     if (contingencyViolationsByContingencyId != null && !contingencyViolationsByContingencyId.keySet().isEmpty()) {
                         try (TableFormatter formatter = PrintOnlineWorkflowUtils.createFormatter(tableFormatterConfig, outputFormat, outputFile, TABLE_TITLE, tableColumns)) {
                             new TreeMap<>(contingencyViolationsByContingencyId).forEach((stateId, violations) ->
-                                    printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter));
+                                    printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter, network));
                         }
                     } else {
                         context.getErrorStream().println("\nNo post contingency violations for workflow " + workflowId + " and contingency " + contingencyId);
@@ -167,7 +170,7 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
                             new TreeMap<>(wfViolations).forEach((stateId, stateViolations) -> {
                                 if (stateViolations != null) {
                                     new TreeMap<>(stateViolations).forEach((contingencyId, violations) -> {
-                                        printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter);
+                                        printStateContingencyViolations(formatter, stateId, contingencyId, violations, violationsFilter, network);
                                     });
                                 }
                             });
@@ -182,11 +185,11 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
     }
 
     private void printStateContingencyViolations(TableFormatter formatter, Integer stateId, String contingencyId, List<LimitViolation> violations,
-                                                 LimitViolationFilter violationsFilter) {
+                                                 LimitViolationFilter violationsFilter, Network network) {
         if (violations != null) {
             List<LimitViolation> filteredViolations = violations;
             if (violationsFilter != null) {
-                filteredViolations = violationsFilter.apply(violations);
+                filteredViolations = violationsFilter.apply(violations, network);
             }
             filteredViolations
                     .stream()
@@ -200,7 +203,7 @@ public class PrintOnlineWorkflowPostContingencyViolationsTool implements Tool {
                             formatter.writeCell(violation.getValue());
                             formatter.writeCell(violation.getLimit());
                             formatter.writeCell(violation.getLimitReduction());
-                            formatter.writeCell(violation.getBaseVoltage());
+                            formatter.writeCell(LimitViolationHelper.getNominalVoltage(violation, network));
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
